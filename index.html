@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE ELSEWHERE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+  --void: #04040a;
+  --deep: #080818;
+  --murk: #0d0d2b;
+  --pale: #c8c0e8;
+  --ghost: #8878b8;
+  --bone: #e8e0d0;
+  --ichor: #4a2060;
+  --dream: #6040a8;
+  --bleed: #a03060;
+  --frog: #3a8040;
+  --frog-glow: #60d060;
+  --mud: #1a1428;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background:var(--void);
+  color:var(--bone);
+  font-family:'Cormorant Garamond',serif;
+  overflow-x:hidden;
+  cursor:none;
+}
+
+/* ── CURSOR ── */
+#cursor { position:fixed; width:12px; height:12px; border-radius:50%; background:var(--pale); pointer-events:none; z-index:9999; mix-blend-mode:difference; transform:translate(-50%,-50%); transition:transform 0.08s; }
+#cursor-ring { position:fixed; width:40px; height:40px; border-radius:50%; border:1px solid var(--ghost); pointer-events:none; z-index:9998; transform:translate(-50%,-50%); transition:left 0.15s ease,top 0.15s ease; opacity:0.5; }
+#cursor.on-card { transform:translate(-50%,-50%) scale(2.5); background:var(--frog-glow); }
+#cursor.on-sand { transform:translate(-50%,-50%) scale(2.5); background:#e8c060; }
+
+/* ── NOISE + VIGNETTE ── */
+#noise { position:fixed; inset:0; z-index:1000; pointer-events:none; opacity:0.038;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:220px; }
+#vignette { position:fixed; inset:0; z-index:5; pointer-events:none; background:radial-gradient(ellipse at center,transparent 38%,rgba(4,4,10,0.8) 100%); }
+
+/* ─────────────────────────────────────────
+   SITE LAYER
+───────────────────────────────────────── */
+#site-layer {
+  position:relative; z-index:10;
+  transition:opacity 0.8s ease, transform 0.8s ease;
+}
+#site-layer.hidden { opacity:0; pointer-events:none; transform:scale(0.97); }
+
+canvas#bg { position:fixed; inset:0; width:100%; height:100%; z-index:0; }
+
+#scroll-world { position:relative; z-index:10; min-height:500vh; }
+
+/* HERO */
+#hero { position:relative; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
+
+.hero-title {
+  font-family:'Cormorant Garamond',serif; font-size:clamp(4rem,12vw,11rem);
+  font-weight:300; font-style:italic; letter-spacing:-0.02em; line-height:0.9;
+  text-align:center; color:transparent; -webkit-text-stroke:1px var(--pale);
+  position:relative; z-index:2; animation:titleDrift 8s ease-in-out infinite alternate;
+  text-shadow:0 0 80px rgba(100,80,200,0.3);
+}
+.hero-title .solid { -webkit-text-stroke:0; color:var(--bone); display:block; }
+@keyframes titleDrift { 0%{transform:translateY(0) rotateX(0)} 100%{transform:translateY(-15px) rotateX(2deg)} }
+
+.hero-sub { font-family:'Space Mono',monospace; font-size:0.65rem; letter-spacing:0.3em; text-transform:uppercase; color:var(--ghost); margin-top:2rem; z-index:2; opacity:0; animation:fadeUp 1.5s ease 1.2s forwards; }
+@keyframes fadeUp { to{opacity:1;transform:translateY(0)} from{opacity:0;transform:translateY(20px)} }
+
+.scroll-hint { position:absolute; bottom:3rem; font-family:'Space Mono',monospace; font-size:0.55rem; letter-spacing:0.4em; color:var(--ghost); opacity:0.5; animation:pulse 3s ease-in-out infinite; z-index:2; }
+@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:0.7} }
+
+.orb { position:absolute; border-radius:50%; filter:blur(60px); pointer-events:none; z-index:1; animation:orbFloat linear infinite; }
+@keyframes orbFloat { 0%{transform:translateY(0) translateX(0) scale(1)} 33%{transform:translateY(-40px) translateX(20px) scale(1.05)} 66%{transform:translateY(20px) translateX(-15px) scale(0.97)} 100%{transform:translateY(0) translateX(0) scale(1)} }
+
+/* WORKS */
+#works { position:relative; padding:15vh 8vw; min-height:200vh; }
+.section-label { font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:0.4em; text-transform:uppercase; color:var(--ghost); margin-bottom:1rem; opacity:0.7; }
+
+.work-item { display:grid; grid-template-columns:1fr 1fr; gap:6vw; align-items:center; margin-bottom:20vh; opacity:0; transform:translateY(60px); transition:all 1s cubic-bezier(0.16,1,0.3,1); }
+.work-item.visible { opacity:1; transform:translateY(0); }
+.work-item:nth-child(even) { direction:rtl; }
+.work-item:nth-child(even)>* { direction:ltr; }
+
+.work-canvas-wrap { position:relative; aspect-ratio:4/3; transform-style:preserve-3d; transition:transform 0.5s ease; }
+.work-canvas-wrap:hover { transform:rotateY(-5deg) rotateX(3deg) scale(1.02); }
+
+/* Clickable card glow */
+.work-canvas-wrap.clickable { cursor:pointer; }
+.work-canvas-wrap.clickable .work-canvas { pointer-events:none; }
+.work-canvas-wrap.clickable::after {
+  content:'READ →';
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.4em;
+  color:var(--frog-glow); opacity:0; transition:opacity 0.4s ease;
+  background:rgba(2,8,4,0.55);
+  pointer-events:none;
+  z-index:2;
+}
+.work-canvas-wrap.clickable:hover::after { opacity:1; }
+.work-canvas-wrap.clickable:hover { transform:rotateY(-5deg) rotateX(3deg) scale(1.04); box-shadow:0 0 60px rgba(60,200,60,0.15); }
+
+.work-canvas { width:100%; height:100%; display:block; border:1px solid rgba(136,120,184,0.2); }
+.work-canvas-wrap.clickable .work-canvas { border-color:rgba(60,160,60,0.25); }
+
+.work-info { padding:2rem; }
+.work-number { font-family:'Space Mono',monospace; font-size:0.6rem; color:var(--ghost); letter-spacing:0.3em; margin-bottom:1.5rem; opacity:0.6; }
+.work-title { font-size:clamp(2.5rem,5vw,4.5rem); font-weight:300; font-style:italic; line-height:1.05; margin-bottom:1.5rem; color:var(--bone); }
+.work-desc { font-size:1.1rem; font-weight:300; line-height:1.7; color:var(--ghost); max-width:380px; }
+.work-tag { display:inline-block; margin-top:1.5rem; font-family:'Space Mono',monospace; font-size:0.55rem; letter-spacing:0.25em; text-transform:uppercase; border:1px solid var(--ichor); padding:0.4em 0.9em; color:var(--pale); opacity:0.7; }
+.work-tag.live { border-color:var(--frog); color:var(--frog-glow); }
+
+.read-btn {
+  display:inline-block; margin-top:1.8rem;
+  font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.3em;
+  text-transform:uppercase; border:1px solid var(--ghost);
+  padding:0.7em 1.8em; color:var(--bone); background:transparent;
+  cursor:pointer; transition:background 0.3s, border-color 0.3s, color 0.3s, transform 0.2s;
+  position:relative; z-index:20;
+}
+.read-btn:hover { background:var(--ichor); border-color:var(--pale); color:#fff; transform:translateY(-2px); }
+
+.divider { width:100%; height:1px; background:linear-gradient(90deg,transparent,var(--ichor),transparent); margin:5vh 0; opacity:0.4; }
+
+/* ABOUT */
+#about { position:relative; padding:15vh 8vw; display:grid; grid-template-columns:1fr 2fr; gap:8vw; align-items:start; }
+.about-title { font-size:clamp(3rem,6vw,6rem); font-style:italic; font-weight:300; line-height:1; color:transparent; -webkit-text-stroke:1px var(--pale); position:sticky; top:30vh; }
+.about-body { font-size:1.35rem; font-weight:300; line-height:1.75; color:var(--bone); max-width:580px; }
+.about-body p { margin-bottom:1.5rem; }
+.about-body em { color:var(--pale); font-style:italic; }
+
+/* CONTACT */
+#contact { position:relative; padding:15vh 8vw 20vh; text-align:center; }
+.contact-big { font-size:clamp(4rem,10vw,9rem); font-style:italic; font-weight:300; line-height:1; color:transparent; -webkit-text-stroke:1px rgba(200,192,232,0.4); cursor:none; transition:all 0.4s ease; display:inline-block; position:relative; }
+.contact-big::after { content:attr(data-text); position:absolute; inset:0; color:var(--bone); -webkit-text-stroke:0; clip-path:inset(100% 0 0 0); transition:clip-path 0.6s cubic-bezier(0.16,1,0.3,1); }
+.contact-big:hover::after { clip-path:inset(0% 0 0 0); }
+
+/* glitch */
+.glitch { position:relative; }
+.glitch::before,.glitch::after { content:attr(data-text); position:absolute; top:0; left:0; width:100%; height:100%; font-size:inherit; font-style:inherit; font-weight:inherit; -webkit-text-stroke:inherit; color:inherit; }
+.glitch::before { color:var(--bleed); -webkit-text-stroke:1px var(--bleed); animation:glitch1 8s infinite; clip-path:polygon(0 15%,100% 15%,100% 40%,0 40%); opacity:0; }
+.glitch::after { color:var(--dream); -webkit-text-stroke:1px var(--dream); animation:glitch2 8s infinite; clip-path:polygon(0 60%,100% 60%,100% 80%,0 80%); opacity:0; }
+@keyframes glitch1 { 0%,90%,100%{opacity:0;transform:translateX(0)} 92%{opacity:0.8;transform:translateX(-4px)} 94%{opacity:0;transform:translateX(3px)} 96%{opacity:0.6;transform:translateX(-2px)} }
+@keyframes glitch2 { 0%,90%,100%{opacity:0;transform:translateX(0)} 91%{opacity:0.7;transform:translateX(4px)} 93%{opacity:0;transform:translateX(-3px)} 97%{opacity:0.5;transform:translateX(2px)} }
+
+@media(max-width:768px){.work-item{grid-template-columns:1fr}.work-item:nth-child(even){direction:ltr}#about{grid-template-columns:1fr}.about-title{position:static}}
+
+/* ─────────────────────────────────────────
+   STORY LAYER
+───────────────────────────────────────── */
+#story-layer {
+  position:fixed; inset:0; z-index:200;
+  overflow-y:auto; overflow-x:hidden;
+  display:none;
+  opacity:0;
+  transition:opacity 0.9s ease;
+  background:var(--void);
+}
+#story-layer.open { opacity:1; pointer-events:all; }
+
+/* Story canvas bg */
+canvas#story-bg { position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; }
+
+/* Progress bar */
+#story-progress { position:fixed; top:0; left:0; height:2px; z-index:400; background:linear-gradient(90deg,var(--bleed),var(--frog)); transition:width 0.2s ease; pointer-events:none; }
+
+/* Close button */
+#story-close {
+  position:fixed; top:2rem; right:2.5rem; z-index:500;
+  font-family:'Space Mono',monospace; font-size:0.55rem; letter-spacing:0.4em;
+  text-transform:uppercase; color:var(--ghost); cursor:pointer;
+  border:1px solid rgba(136,120,184,0.3); padding:0.5em 1.2em;
+  background:rgba(4,4,10,0.8); backdrop-filter:blur(6px);
+  transition:color 0.3s,border-color 0.3s;
+}
+#story-close:hover { color:var(--pale); border-color:var(--pale); }
+
+/* Story nav dots */
+#story-nav { position:fixed; right:1.5rem; top:50%; transform:translateY(-50%); z-index:400; display:flex; flex-direction:column; gap:0.55rem; }
+.s-dot { width:5px; height:5px; border-radius:50%; background:var(--ghost); opacity:0.3; cursor:none; transition:opacity 0.3s,transform 0.3s,background 0.3s; }
+.s-dot.active { opacity:1; transform:scale(1.7); background:var(--frog-glow); }
+
+/* Story intro screen */
+#story-intro {
+  position:fixed; inset:0; z-index:450;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:var(--void); pointer-events:none;
+  transition:opacity 1.2s ease, transform 1.2s ease;
+}
+#story-intro.active { pointer-events:all; }
+#story-intro.gone { opacity:0; transform:scale(1.04); pointer-events:none; }
+
+.si-label { font-family:'Space Mono',monospace; font-size:0.55rem; letter-spacing:0.5em; text-transform:uppercase; color:var(--ghost); margin-bottom:3rem; }
+.si-title { font-size:clamp(3rem,9vw,8rem); font-style:italic; font-weight:300; line-height:0.95; text-align:center; }
+.si-title span { display:block; color:transparent; -webkit-text-stroke:1px rgba(200,192,232,0.6); }
+.si-sub { margin-top:1.5rem; font-style:italic; font-size:1.05rem; color:var(--ghost); }
+.si-btn {
+  margin-top:4rem; font-family:'Space Mono',monospace; font-size:0.6rem;
+  letter-spacing:0.4em; text-transform:uppercase; color:var(--pale);
+  border:1px solid var(--ghost); padding:0.9em 2.5em; background:transparent;
+  cursor:pointer; transition:background 0.3s,color 0.3s,border-color 0.3s;
+}
+.si-btn:hover { background:var(--ichor); border-color:var(--pale); }
+
+/* PAGES */
+#story-pages { position:relative; z-index:10; }
+
+.s-page {
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:10vh 8vw; opacity:0; transform:translateY(50px);
+  transition:opacity 1.3s cubic-bezier(0.16,1,0.3,1),transform 1.3s cubic-bezier(0.16,1,0.3,1);
+  position:relative;
+}
+.s-page.visible { opacity:1; transform:translateY(0); }
+
+.s-inner { max-width:720px; width:100%; }
+
+.s-num { font-family:'Space Mono',monospace; font-size:0.55rem; letter-spacing:0.4em; color:var(--ghost); text-transform:uppercase; margin-bottom:2.5rem; opacity:0.6; display:flex; align-items:center; gap:1rem; }
+.s-num::before { content:''; display:block; width:30px; height:1px; background:var(--ghost); opacity:0.4; }
+
+.s-head { font-size:clamp(2.5rem,5vw,4.5rem); font-style:italic; font-weight:300; line-height:1.05; margin-bottom:2rem; }
+.s-head.outline { color:transparent; -webkit-text-stroke:1px var(--pale); }
+.s-head.solid { color:var(--bone); }
+
+.s-body { font-size:clamp(1.05rem,1.8vw,1.3rem); font-weight:300; line-height:1.95; color:var(--bone); }
+.s-body p { margin-bottom:1.4em; }
+.s-body em { color:var(--pale); font-style:italic; }
+.s-body strong { color:#fff; font-weight:400; }
+
+.frog-line {
+  display:block; color:var(--frog-glow); font-style:italic;
+  margin:1.4em 0; padding-left:1.8em;
+  border-left:1px solid rgba(60,160,60,0.5);
+  line-height:1.7;
+  text-shadow:0 0 20px rgba(60,200,60,0.3);
+}
+
+.pull { margin:2.2rem 0; padding:1.6rem 2rem; border-left:2px solid var(--bleed); font-size:clamp(1.2rem,2.2vw,1.6rem); font-style:italic; color:var(--pale); line-height:1.55; background:rgba(58,24,80,0.12); }
+
+.s-divider { width:50px; height:1px; background:linear-gradient(90deg,var(--ghost),transparent); margin:2rem 0; opacity:0.4; }
+
+/* end page */
+.s-endmark { font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:0.5em; color:var(--ghost); text-transform:uppercase; display:block; margin-top:3.5rem; opacity:0.5; }
+.s-back { display:inline-block; margin-top:2rem; font-family:'Space Mono',monospace; font-size:0.55rem; letter-spacing:0.35em; text-transform:uppercase; color:var(--ghost); text-decoration:none; border-bottom:1px solid var(--ichor); padding-bottom:2px; cursor:pointer; transition:color 0.3s; }
+.s-back:hover { color:var(--pale); }
+</style>
+
+<style id="chatgpt-story-fix">
+/* Force all story pages to render fully and stay visible */
+#story-pages .s-page,
+#sand-pages .s-page,
+#leon-pages .s-page{
+  opacity:1 !important;
+  transform:none !important;
+  display:flex !important;
+  visibility:visible !important;
+}
+#story-layer,#sand-layer,#leon-layer{
+  overflow-y:auto !important;
+  height:100vh !important;
+}
+</style>
+
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<div id="noise"></div>
+<div id="vignette"></div>
+
+<!-- ═══════════════════════════════
+     SITE LAYER
+═══════════════════════════════ -->
+<div id="site-layer">
+  <canvas id="bg"></canvas>
+  <div id="scroll-world">
+
+    <section id="hero">
+      <div class="orb" style="width:600px;height:600px;top:-100px;left:-150px;background:radial-gradient(circle,rgba(74,32,96,0.6),transparent 70%);animation-duration:14s;"></div>
+      <div class="orb" style="width:400px;height:400px;top:30%;right:-100px;background:radial-gradient(circle,rgba(96,64,168,0.4),transparent 70%);animation-duration:11s;animation-delay:-4s;"></div>
+      <div class="orb" style="width:300px;height:300px;bottom:10%;left:20%;background:radial-gradient(circle,rgba(160,48,96,0.3),transparent 70%);animation-duration:9s;animation-delay:-7s;"></div>
+      <h1 class="hero-title glitch" data-text="The Elsewhere"><span class="solid">The</span>Elsewhere</h1>
+      <p class="hero-sub">a surreal creative archive &nbsp;·&nbsp; where logic sleeps</p>
+      <span class="scroll-hint">scroll to descend ↓</span>
+    </section>
+
+    <div class="divider"></div>
+
+    <section id="works">
+      <p class="section-label">Selected Works</p>
+
+      <!-- Work 1 — Sand Sea -->
+      <div class="work-item">
+        <div class="work-canvas-wrap">
+          <canvas class="work-canvas" id="c1" width="800" height="600"></canvas>
+        </div>
+        <div class="work-info">
+          <p class="work-number">001 / 003</p>
+          <h2 class="work-title">The Sand Sea<br>of Elsewhere</h2>
+          <p class="work-desc">Elsewhere Story No. 002. Ryan the rabbit and Zirr the butterfly. Two strangers from different dimensions, wandering a sea of sand that has no shore and no bottom and no intention of explaining itself.</p>
+          <button class="read-btn" id="sand-read-btn">✦ Read Now</button>
+        </div>
+      </div>
+
+      <!-- Work 2 — Soldier & Frog -->
+      <div class="work-item">
+        <div class="work-canvas-wrap">
+          <canvas class="work-canvas" id="c2" width="800" height="600"></canvas>
+        </div>
+        <div class="work-info">
+          <p class="work-number">002 / 003</p>
+          <h2 class="work-title">The Soldier<br>& the Frog</h2>
+          <p class="work-desc">Elsewhere Story No. 001. Austria, 3017. A trench with no bottom. A frog that knows your name. Private Zielinski didn't ask any of this to happen.</p>
+          <button class="read-btn" id="read-now-btn">✦ Read Now</button>
+        </div>
+      </div>
+
+      <!-- Work 3 — The Unnamed Territory -->
+      <div class="work-item">
+        <div class="work-canvas-wrap">
+          <canvas class="work-canvas" id="c3" width="800" height="600"></canvas>
+        </div>
+        <div class="work-info">
+          <p class="work-number">003 / 003</p>
+          <h2 class="work-title">The Unnamed<br>Territory</h2>
+          <p class="work-desc">Elsewhere Story No. 003. Leon, a young elf, wandered into a place that is not quite a place. Euphoric. Cosmic. Endless. He knows it's not over. He does not know what that means.</p>
+          <button class="read-btn" id="leon-read-btn">✦ Read Now</button>
+        </div>
+      </div>
+    
+      <!-- Work 4 — Cartographer -->
+      <div class="work-item">
+        <div class="work-canvas-wrap clickable">
+          <canvas class="work-canvas" id="c4" width="800" height="600"></canvas>
+        </div>
+        <div class="work-info">
+          <p class="work-number">004 / 004</p>
+          <h2 class="work-title">The Cartographer<br>of Unmade Places</h2>
+          <p class="work-desc">Elsewhere Story No. 004. Lethum maps places that do not exist yet. The Raven spends twelve years trying to discover whether impossible maps can lead somewhere real.</p>
+          <button class="read-btn" id="cartographer-read-btn">✦ Read Now</button>
+        </div>
+      </div>
+
+    </section>
+
+    <div class="divider"></div>
+
+    <section id="about">
+      <h2 class="about-title glitch" data-text="Who.">Who.</h2>
+      <div class="about-body">
+        <p>A writer who lives in the uncomfortable gap between meaning and nonsense — and finds it <em>hilarious</em>, then finds it <em>terrifying</em>, then finds it <em>funny again</em>.</p>
+        <p>The work is surreal because reality is already surreal. The darkness is there because ignoring it is a lie. The crude edge is there because <em>refinement is sometimes just cowardice</em>.</p>
+        <p>Stories where frogs know your name. Deserts that swim. Logic that dissolves in the heat. An ending that refuses to be the ending.</p>
+        <p style="color:var(--ghost);font-size:0.95rem;margin-top:2rem;">The Elsewhere is a state of mind. You've been here before. You just didn't have a name for it.</p>
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="divider"></div>
+      <p class="section-label" style="text-align:center;margin-bottom:3rem;">E
